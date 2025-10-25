@@ -7,5 +7,5 @@ For a full demonstration and short walkthrough of how it works, check out my web
 This does not have a compiled version on github. To run this, run main.cpp in a C++ ide or compile and run it like any other C++ program. There are settings you can change in main.cpp. Look for the OptionsSnapshot snapshot, starting near the top of the file. Use snapshot.port.push_back() to connect to multiple plugins with multiple ports at once. You can push functionally as many ports as you want into this array and it will send information to all of them.
 
 ### See also:
-[Camsynth Player](https://github.com/MC-Atom/CamsynthPlayer): A synth that uses an outline to generate sound using all of the partials of its fourier series.
-[Camsynth Filter](https://github.com/MC-Atom/CamsynthFilter): A plugin that uses the ratio between the amplitudes of high and low frequencies of an outline to control a filter.
+* [Camsynth Player](https://github.com/MC-Atom/CamsynthPlayer): A synth that uses an outline to generate sound using all of the partials of its fourier series.
+* [Camsynth Filter](https://github.com/MC-Atom/CamsynthFilter): A plugin that uses the ratio between the amplitudes of high and low frequencies of an outline to control a filter.
