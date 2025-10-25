@@ -11,6 +11,7 @@
 
 #include "frameProcessor.h"
 
+#include <random>
 #include <opencv2/features2d.hpp>
 
 #include "dft.h"
@@ -56,7 +57,10 @@ void FrameProcessor::run() {
 
     curl = curl_easy_init();
     assert(curl);
-    std::string url = std::string("http://127.0.0.1:") + std::to_string(options.getPort());
+    std::string urls [options.getPort().size()];
+    for (int i = 0; i < options.getPort().size(); i++) {
+        urls [i] = std::string("http://127.0.0.1:") + std::to_string(options.getPort()[i]);
+    }
 
     // Used code from https://gist.github.com/priteshgohil/edce691cf557e7e3bb708ff100a18da3 for camera capture
 
@@ -72,7 +76,7 @@ void FrameProcessor::run() {
 
     while (!grabber.getLatestFrame(inputFrame)){}
     // find the target width and height
-    //inputFrame = cv::imread("../assets/star.webp", cv::IMREAD_COLOR);
+    //inputFrame = cv::imread("../assets/star.jpg", cv::IMREAD_COLOR);
     accumulatedFrame = inputFrame.clone();
     int originalWidth = inputFrame.cols;
     int originalHeight = inputFrame.rows;
@@ -89,17 +93,18 @@ void FrameProcessor::run() {
     while (running) {
         auto optionsSnapshot = options.getSnapshot();
         if (grabber.getLatestFrame(inputFrame)) {
+
             // display the frame until you press a key
             // capture the next frame from the webcam
             //WhiteBalance
             cv::Ptr<cv::xphoto::SimpleWB> wb = cv::xphoto::createSimpleWB();
             wb ->balanceWhite(inputFrame, inputFrame);
 
-            //inputFrame = cv::imread("../assets/star.webp", cv::IMREAD_COLOR);
-            cv::addWeighted(accumulatedFrame, 1.0 - ALPHA, inputFrame, ALPHA, 0, accumulatedFrame);
-
+            //inputFrame = cv::imread("../assets/star.jpg", cv::IMREAD_COLOR);
+            //cv::addWeighted(accumulatedFrame, 1.0 - ALPHA, inputFrame, ALPHA, 0, accumulatedFrame);
+            accumulatedFrame = inputFrame;
             // Resize the frame
-            cv::resize(accumulatedFrame, resized, cv::Size(targetWidth, newHeight));
+            cv::resize(inputFrame, resized, cv::Size(targetWidth, newHeight));
 
 
             // 1. Convert BGR to HSV
@@ -128,15 +133,15 @@ void FrameProcessor::run() {
                 for( int x = 0; x < frame.cols; x++ ) {
                     for( int c = 0; c < frame.channels(); c++ ) {
                         contrastFrame.at<cv::Vec3b>(y,x)[c] =
-                          cv::saturate_cast<uchar>( optionsSnapshot.contrast*frame.at<cv::Vec3b>(y,x)[c] + optionsSnapshot.brightness );
+                          cv::saturate_cast<uchar>( optionsSnapshot.contrast * frame.at<cv::Vec3b>(y,x)[c] + optionsSnapshot.brightness );
                     }
                 }
             }
             frame = contrastFrame;
 
             // Apply Gaussian blur to smooth the input image
-            cv::blur(frame, temp, cv::Size(2, 2));
-            frame = temp;
+            //cv::blur(frame, temp, cv::Size(2, 2));
+            //frame = temp;
 
             // Blob detection and isolation
             //if (optionsSnapshot.getBlobDetection()) {
@@ -148,15 +153,39 @@ void FrameProcessor::run() {
             //std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
             // Apply Canny edge detection
-            cv::Canny(frame, edges, 90, 180);
+            cv::Canny(frame, edges, 40, 180);
             // Morphological closing to close small holes in the edges
-            cv::morphologyEx(edges, cleaned, cv::MORPH_CLOSE, cv::Mat::ones(8, 8, CV_8U));
+            //cv::morphologyEx(edges, cleaned, cv::MORPH_CLOSE, cv::Mat::ones(12, 12, CV_8U));
+
+
+            int morphValue = 2;
+            int imsize = frame.cols * frame.rows;
+            int fillVal = imsize;
+
+            while (morphValue < 32 && fillVal > (imsize * 0.9)) {
+                cleaned = frame;
+                cv::morphologyEx(edges, cleaned, cv::MORPH_CLOSE, cv::Mat::ones(morphValue, morphValue, CV_8U));
+                fillVal = cv::floodFill(cleaned, cv::Point(0),255);
+                morphValue++;
+            }
+            if (morphValue >= 32) {continue;}
             frame = cleaned;
+
+            int borderSize = 20;
+            borderSize = 20;
+            cv::copyMakeBorder(
+                frame,
+                bordered,
+                borderSize, borderSize,  // top, bottom
+                borderSize, borderSize,  // left, right
+                cv::BORDER_CONSTANT,
+                cv::Scalar(255, 255, 255)
+            );
 
 
             // Find contours
             std::vector<std::vector<cv::Point>> contours;
-            cv::findContours(frame.clone(), contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+            cv::findContours(bordered.clone(), contours, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
             if (contours.empty()) {
                 std::cerr << "No contours found\n";
                 continue;
@@ -164,23 +193,28 @@ void FrameProcessor::run() {
 
             // Find the largest contour
             size_t largestContourIdx = 0;
+            size_t SecondlargestContourIdx = 0;
             double maxArea = 0.0;
+            double maxArea2 = 0.0;
             for (size_t i = 0; i < contours.size(); ++i) {
                 double area = cv::contourArea(contours[i]);
                 if (area > maxArea) {
+                    maxArea2 = maxArea;
+                    SecondlargestContourIdx = largestContourIdx;
                     maxArea = area;
                     largestContourIdx = i;
+                } else if (area > maxArea2) {
+                    maxArea2 = area;
+                    SecondlargestContourIdx = i;
                 }
             }
-            std::vector<cv::Point> largestContour = contours[largestContourIdx];
+            std::vector<cv::Point> largestContour = contours[SecondlargestContourIdx];
 
-            largestCont = cv::Mat::zeros(frame.size(), CV_8UC3);
+            largestCont = cv::Mat::zeros(bordered.size(), CV_8UC3);
             for (cv::Point& pt : largestContour) {
 
                 cv::circle(largestCont, pt, 1, cv::Scalar(0, 0, 255), -1);
             }
-
-
 
 
 
@@ -191,6 +225,10 @@ void FrameProcessor::run() {
                 complexPoints.emplace_back(static_cast<double>(pt.x), static_cast<double>(pt.y));
             }
 
+            //auto rng = std::default_random_engine {2123};
+            //std::shuffle(std::begin(complexPoints), std::end(complexPoints), rng);
+
+             //cv::drawContours(blur, contours, -1, cv::Scalar(0, 255, 0), cv::FILLED);
 
             // THIS IS WHERE THE MAGIC HAPPENSS YIPEPEEEEEEEE!!!!
             std::vector<FourierComponent> fourierSeries = fourier(complexPoints,DEPTH);
@@ -210,14 +248,16 @@ void FrameProcessor::run() {
 
             //jsonOut = R"({"harmonicSeries":[{"Amp":0.5,"Freq":2,"Phase":0}]})";
 
-            curl = curl_easy_init();
-            curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonOut.c_str());
-            res = curl_easy_perform(curl);
-            if(res != CURLE_OK) fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-            curl_easy_cleanup(curl);
+            for (std::string url : urls)  {
+                curl = curl_easy_init();
+                curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+                curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonOut.c_str());
+                res = curl_easy_perform(curl);
+                if(res != CURLE_OK) fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+                curl_easy_cleanup(curl);
+            }
 
-            fourierImage = cv::Mat::zeros(frame.size(), CV_8UC3);
+            fourierImage = cv::Mat::zeros(bordered.size(), CV_8UC3);
             int trailSize = 5000;
             for (int trail = -trailSize; trail <= 0; ++trail) {
                 std::complex<double> sum(0, 0);

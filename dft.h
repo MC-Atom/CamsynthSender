@@ -16,7 +16,7 @@ struct FourierComponent {
 };
 
 std::vector<FourierComponent> fourier(const std::vector<std::complex<double>>& path, int depth);
-std::complex<double> integrateC(std::function<std::complex<double>(double)> func, double a, double b, double err);
+std::complex<double> integrateC(std::function<std::complex<double>(double)> func, double a, double b);
 
 void printFourierComponents(const std::vector<FourierComponent>& components);
 

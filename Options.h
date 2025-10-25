@@ -20,7 +20,7 @@ public:
 
         return {
             port, cropLeft, cropRight, cropTop, cropBottom,
-            targetWidth, contrast, brightness, blobDetection
+            targetWidth, contrast, brightness, blobDetection, whiteBorder
         };
     }
 
@@ -31,7 +31,7 @@ public:
         mu.unlock();
     }
 
-    int getPort() { std::lock_guard<std::mutex> lock(mu); return port;}
+    std::vector<int> getPort() { std::lock_guard<std::mutex> lock(mu); return port;}
     int getTargetWidth() { std::lock_guard<std::mutex> lock(mu); return targetWidth;}
 
     void setOptions(OptionsSnapshot snapshot) {
@@ -45,12 +45,13 @@ public:
         contrast = snapshot.contrast;
         brightness = snapshot.brightness;
         blobDetection = snapshot.blobDetection;
+        whiteBorder = snapshot.whiteBorder;
     }
 
 private:
     std::mutex mu;
 
-    int port = 0;
+    std::vector<int> port = {};
     int cropLeft = 0;
     int cropRight = 0;
     int cropTop = 0;
@@ -59,6 +60,7 @@ private:
     float contrast = 2;
     float brightness = 0.0;
     bool blobDetection = false;
+    bool whiteBorder = false;
 };
 
 

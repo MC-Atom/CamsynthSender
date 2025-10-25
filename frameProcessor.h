@@ -23,7 +23,7 @@ public:
     // array to hold the last frame
     cv::Mat frame;
     // Edge Detection
-    cv::Mat blur, edges, cleaned;
+    cv::Mat blur, edges, cleaned, bordered;
     // other stuff
     cv::Mat largestCont, fourierImage, temp;
 

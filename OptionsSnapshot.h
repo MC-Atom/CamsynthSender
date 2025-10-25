@@ -6,12 +6,13 @@
 #define OPTIONSSNAPSHOT_H
 
 struct OptionsSnapshot {
-    int port;
+    std::vector<int> port;
     int cropLeft, cropRight, cropTop, cropBottom;
     int targetWidth;
     float contrast, brightness;
     int morphology;
     bool blobDetection;
+    bool whiteBorder;
 };
 
 #endif //OPTIONSSNAPSHOT_H

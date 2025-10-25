@@ -21,16 +21,20 @@ static void on_contrastbar( int, void* )
 }
 
 int main() {
-
     OptionsSnapshot snapshot;
-    snapshot.port = 8080;
-    snapshot.blobDetection = true;
-    snapshot.cropLeft = 0;
-    snapshot.cropRight = 0;
-    snapshot.cropTop = 0;
-    snapshot.cropBottom = 0;
 
-    snapshot.targetWidth = 500;
+    //snapshot.port.push_back(8080);
+    snapshot.port.push_back(8080);
+    snapshot.port.push_back(8081);
+
+    snapshot.blobDetection = true;
+    snapshot.whiteBorder = true;
+    snapshot.cropLeft = 500;
+    snapshot.cropRight = 400;
+    snapshot.cropTop = 0;
+    snapshot.cropBottom = 100;
+
+    snapshot.targetWidth = 1000;
     snapshot.brightness = brightness_slider - 400;
     snapshot.contrast = contrast_slider / 10.0f;
 
@@ -46,9 +50,7 @@ int main() {
     cv::namedWindow("HSV", cv::WINDOW_AUTOSIZE);
     //cv::namedWindow("Greyscale", cv::WINDOW_AUTOSIZE);
 
-    namedWindow("Options", cv::WINDOW_AUTOSIZE); // Create Window
-    cv::createTrackbar( "Brightness: " + std::to_string(brightness_slider / 5), "Options", &brightness_slider, 500, on_brightbar );
-    cv::createTrackbar( "Contrast: " + std::to_string(brightness_slider/10.0f), "Options", &contrast_slider, 100, on_contrastbar );
+    bool firstRun = true;
 
     bool quit = false;
     while (!quit) {
@@ -57,9 +59,17 @@ int main() {
             //if (!processor.hueGray.empty()) cv::imshow("HSV", processor.hueGray);
             //if (!processor.grayscale.empty()) cv::imshow("Greyscale", processor.grayscale);
             if (!processor.blur.empty()) cv::imshow("Blur", processor.blur);
-            if (!processor.edges.empty()) cv::imshow("Edges", processor.cleaned);
+            //if (!processor.edges.empty()) cv::imshow("Edges", processor.cleaned);
+            if (!processor.bordered.empty()) cv::imshow("bordered", processor.bordered);
             if (!processor.largestCont.empty()) cv::imshow("largestCont", processor.largestCont);
             if (!processor.fourierImage.empty()) cv::imshow("fourierImage", processor.fourierImage);
+        }
+
+        if (firstRun) {
+            namedWindow("Options", cv::WINDOW_AUTOSIZE); // Create Window
+            cv::createTrackbar( "Brightness: " + std::to_string(brightness_slider / 5), "Options", &brightness_slider, 500, on_brightbar );
+            cv::createTrackbar( "Contrast: " + std::to_string(brightness_slider/10.0f), "Options", &contrast_slider, 100, on_contrastbar );
+            firstRun = false;
         }
 
         // wait (10ms) for esc key to be pressed to stop
